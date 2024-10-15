@@ -1,3 +1,145 @@
+/*15.10.2024
+Егор, Добрый день!
+
+Прошу проверить и принять финальное задание спринта: проект Автосалон «Врум-Бум».
+Надеюсь, я верно поняла твои комментарии:).
+
+В DDL.sql
+Исправила согласно рекомендаций: по очереди DROP - CREATE:
+
+DROP TABLE car_shop.auto_model CASCADE;
+CREATE TABLE IF NOT EXISTS car_shop.auto_model (
+    id SERIAL PRIMARY KEY,
+    auto_model VARCHAR(50),
+    gasoline_consumption NUMERIC(3, 1) NULL,
+    auto_brand_id INT REFERENCES car_shop.auto_brand(id)
+);
+
+DROP TABLE car_shop.auto_version CASCADE;
+CREATE TABLE IF NOT EXISTS car_shop.auto_version (
+    id SERIAL PRIMARY KEY,
+    auto_model VARCHAR(50),
+    cars_color_id INT REFERENCES car_shop.cars_color(id)
+);
+
+DROP TABLE car_shop.auto_sale CASCADE;
+CREATE TABLE IF NOT EXISTS car_shop.auto_sale (
+    id SERIAL PRIMARY KEY,
+    price NUMERIC(9, 2) NOT NULL,
+    discount NUMERIC(4, 0),
+    date DATE NOT NULL,
+    auto_version_id INT REFERENCES car_shop.auto_version(id),
+    person_id INT REFERENCES car_shop.person(id)
+);
+
+В INITIAL.sql
+Добавила код, согласно рекомендаций: 
+-- Заполнение таблицы sales данными из файла .csv в DBeaver
+Можно добавить данные из файла в DBeaver при условии наличия прав суперюзера в БД. 
+Поскольку прав таких не имею в данной БД, данную команду не описывала:)
+COPY raw_data.sales (id, auto, gasoline_consumption, price, date, person, phone, discount, brand_origin) FROM 'C:\Temp\cars.csv' WITH (FORMAT csv, HEADER, DELIMITER ',', NULL 'null');
+
+
+В INSERT.sql
+Исправила согласно рекомендаций:
+
+INSERT INTO car_shop.auto_model (auto_model, gasoline_consumption, auto_brand_id)
+SELECT 
+    TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 2)) || 
+    CASE WHEN LENGTH(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3)) > 0 
+         THEN ' ' || SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3)
+         ELSE ''
+    END AS auto_model,
+    rds.gasoline_consumption AS gasoline_consumption,
+    csab.id AS auto_brand_id
+FROM raw_data.sales rds
+JOIN car_shop.auto_brand csab 
+    ON SPLIT_PART(rds.auto, ' ', 1) = csab.auto_brand
+GROUP BY auto_model, gasoline_consumption, auto_brand_id
+ORDER BY auto_model;
+
+INSERT INTO car_shop.auto_version (auto_model, cars_color_id)
+SELECT DISTINCT
+    csam.auto_model AS auto_model,
+    cscc.id
+FROM raw_data.sales rds
+JOIN car_shop.auto_model csam ON TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 2)) || 
+    CASE WHEN LENGTH(TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3))) > 0 
+         THEN ' ' || TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3))
+         ELSE ''
+    END = csam.auto_model
+JOIN car_shop.cars_color cscc ON TRIM(BOTH ' ' FROM SPLIT_PART(rds.auto, ',', 2)) = cscc.auto_colors
+ORDER BY csam.auto_model;
+
+INSERT INTO car_shop.auto_sale (price, discount, date, auto_version_id, person_id)
+SELECT DISTINCT 
+    rds.price,
+    rds.discount,
+    rds.date,
+    (
+        SELECT csav.id 
+        FROM car_shop.auto_version csav
+        WHERE TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 2)) || 
+        CASE 
+            WHEN LENGTH(TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3))) > 0 
+            THEN ' ' || TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3))
+            ELSE ''
+        END = csav.auto_model
+        LIMIT 1
+    ) AS auto_version_id,
+    csp.id AS person_id
+FROM raw_data.sales rds
+INNER JOIN car_shop.person csp 
+    ON rds.phone = csp.phone
+ORDER BY person_id;
+
+
+Изменения в таблицах потребовали изменения в коде тестов №1 и №5
+/*В коде ТЕСТ №1 внесла изменения:*/
+SELECT 
+    ROUND((COUNT(id) FILTER (WHERE gasoline_consumption IS NULL) * 100.0) 
+    / 
+    COUNT(id), 2) AS nulls_percentage_gasoline_consumption
+FROM car_shop.auto_model;
+
+/*В коде ТЕСТ №5 внесла изменения:*/
+SELECT 
+    c.brand_country AS country, 
+    ROUND(MAX(s.price / (1 - s.discount / 100)), 2) AS price_max,
+    ROUND(MIN(s.price / (1 - s.discount / 100)), 2) AS price_min
+FROM car_shop.auto_sale AS s
+LEFT JOIN car_shop.auto_version AS csav ON s.auto_version_id = csav.id
+LEFT JOIN car_shop.auto_model AS m ON csav.auto_model = m.auto_model
+LEFT JOIN car_shop.auto_brand AS b ON m.auto_brand_id = b.id
+LEFT JOIN car_shop.country AS c ON b.country_id = c.id
+GROUP BY c.brand_country
+ORDER BY price_max DESC;
+
+Надеюсь, все учла:)
+Приятного перепрочтения и наилучшие пожелания!
+Татьяна.*/
+
+
+
+/*27.09.2024
+
+Привет, Татьяна!
+Это Усов Егор, и я буду проверять выполненное тобой задание. Моя цель не указать на совершённые тобой ошибки, а поделиться своим опытом и помочь улучшить твои навыки.
+Предлагаю общаться на “ты”, но если тебе комфортнее на “вы”, то дай знать об этом!
+Что получилось хорошо:
+1. Все скрипты работают и выполняют поставленную задачу.
+2. Расчеты по заданию выполнены.
+3. Ты верно выделила сущности из таблицы сырых данных.
+Что нужно исправить:
+1. Нужно поправить схему данных. Убрать лишнее поле из таблицы продаж и корректно связать модели и цвета.
+2. Нужно поправить наполнение основной таблицы, чтобы избавится от дубликатов.
+В целом работа выполнена хорошо. Уверен ты без труда исправишь замечания.
+Если будут какие-то вопросы по моим комментариям, обязательно пиши.
+Егор Усов
+ревьюер*/
+
+
+
 /*Добавьте в этот файл пояснения к выбранной модели данных. 
 Также вы можете сохранить здесь другие комментарии по проекту, которые вы считаете необходимыми, 
 и задать вопросы ревьюеру*/

@@ -42,6 +42,23 @@ GROUP BY auto_model, cars_color_id, auto_brand_id
 ORDER BY auto_model;
 
 
+/*Исправлено на */
+INSERT INTO car_shop.auto_model (auto_model, gasoline_consumption, auto_brand_id)
+SELECT 
+    TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 2)) || 
+    CASE WHEN LENGTH(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3)) > 0 
+         THEN ' ' || SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3)
+         ELSE ''
+    END AS auto_model,
+    rds.gasoline_consumption AS gasoline_consumption,
+    csab.id AS auto_brand_id
+FROM raw_data.sales rds
+JOIN car_shop.auto_brand csab 
+    ON SPLIT_PART(rds.auto, ' ', 1) = csab.auto_brand
+GROUP BY auto_model, gasoline_consumption, auto_brand_id
+ORDER BY auto_model;
+
+
 INSERT INTO car_shop.person (first_name, last_name, phone)
 SELECT DISTINCT ON (TRIM(BOTH ' ' FROM SPLIT_PART(rds.person, ' ', 1)), 
                     INITCAP(TRIM(BOTH ' ' FROM SPLIT_PART(rds.person, ' ', 2))), 
@@ -59,6 +76,20 @@ INSERT INTO car_shop.auto_version (auto_model, gasoline_consumption, cars_color_
 SELECT DISTINCT
     csam.auto_model AS auto_model,
     rds.gasoline_consumption,
+    cscc.id
+FROM raw_data.sales rds
+JOIN car_shop.auto_model csam ON TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 2)) || 
+    CASE WHEN LENGTH(TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3))) > 0 
+         THEN ' ' || TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3))
+         ELSE ''
+    END = csam.auto_model
+JOIN car_shop.cars_color cscc ON TRIM(BOTH ' ' FROM SPLIT_PART(rds.auto, ',', 2)) = cscc.auto_colors
+ORDER BY csam.auto_model;
+
+/*Исправлено на */
+INSERT INTO car_shop.auto_version (auto_model, cars_color_id)
+SELECT DISTINCT
+    csam.auto_model AS auto_model,
     cscc.id
 FROM raw_data.sales rds
 JOIN car_shop.auto_model csam ON TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 2)) || 
@@ -89,3 +120,27 @@ RIGHT JOIN car_shop.person csp
     ON rds.phone = csp.phone
 ON CONFLICT (price, discount, date, country)
 DO NOTHING;
+
+
+/*Исправлено на */
+INSERT INTO car_shop.auto_sale (price, discount, date, auto_version_id, person_id)
+SELECT DISTINCT 
+    rds.price,
+    rds.discount,
+    rds.date,
+    (
+        SELECT csav.id 
+        FROM car_shop.auto_version csav
+        WHERE TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 2)) || 
+        CASE 
+            WHEN LENGTH(TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3))) > 0 
+            THEN ' ' || TRIM(SPLIT_PART(SPLIT_PART(rds.auto, ',', 1), ' ', 3))
+            ELSE ''
+        END = csav.auto_model
+        LIMIT 1
+    ) AS auto_version_id,
+    csp.id AS person_id
+FROM raw_data.sales rds
+INNER JOIN car_shop.person csp 
+    ON rds.phone = csp.phone
+ORDER BY person_id;

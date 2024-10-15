@@ -18,6 +18,12 @@ CREATE TABLE IF NOT EXISTS raw_data.sales (
     brand_origin VARCHAR(100)
 );
 
+/*Исправлено */
+-- Заполнение таблицы sales данными из файла .csv в DBeaver
+Можно добавить данные из файла в DBeaver при условии наличия прав суперюзера в БД. 
+Поскольку прав таких не имею в данной БД, данную команду не описывала:)
+COPY raw_data.sales (id, auto, gasoline_consumption, price, date, person, phone, discount, brand_origin) FROM 'C:\Temp\cars.csv' WITH (FORMAT csv, HEADER, DELIMITER ',', NULL 'null');
+
 
 -- Заполнение таблицы sales данными в DBeaver
 INSERT INTO raw_data.sales (id, auto, gasoline_consumption, price, date, person, phone, discount, brand_origin)
@@ -27,4 +33,4 @@ VALUES
 … и так далее до 1000 строк.
 
 -- Заполнение таблицы sales данными в psql
-\copy raw_data.sales (id, auto, gasoline_consumption, price, sale_date, person, phone, discount, brand_origin) FROM 'C:\Temp\cars.csv' WITH (FORMAT csv, HEADER, DELIMITER ',', NULL 'null');
+\copy raw_data.sales (id, auto, gasoline_consumption, price, date, person, phone, discount, brand_origin) FROM 'C:\Temp\cars.csv' WITH (FORMAT csv, HEADER, DELIMITER ',', NULL 'null');

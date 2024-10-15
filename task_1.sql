@@ -8,3 +8,10 @@ SELECT
     / 
     COUNT(id), 2) AS nulls_percentage_gasoline_consumption
 FROM car_shop.auto_version;
+
+/*В коде внесла изменения:*/
+SELECT 
+    ROUND((COUNT(id) FILTER (WHERE gasoline_consumption IS NULL) * 100.0) 
+    / 
+    COUNT(id), 2) AS nulls_percentage_gasoline_consumption
+FROM car_shop.auto_model;

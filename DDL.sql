@@ -32,6 +32,15 @@ CREATE TABLE IF NOT EXISTS car_shop.auto_model (
     cars_color_id INT REFERENCES car_shop.cars_color(id),
     auto_brand_id INT REFERENCES car_shop.auto_brand(id)
 );
+/*Исправлено на */
+DROP TABLE car_shop.auto_model CASCADE;
+
+CREATE TABLE IF NOT EXISTS car_shop.auto_model (
+    id SERIAL PRIMARY KEY,
+    auto_model VARCHAR(50),
+    gasoline_consumption NUMERIC(3, 1) NULL,
+    auto_brand_id INT REFERENCES car_shop.auto_brand(id)
+);
 
 
 CREATE TABLE IF NOT EXISTS car_shop.person (
@@ -49,14 +58,33 @@ CREATE TABLE IF NOT EXISTS car_shop.auto_version (
     cars_color_id INT REFERENCES car_shop.cars_color(id)
 );
 
+/*Исправлено на */
+DROP TABLE car_shop.auto_version CASCADE;
+
+CREATE TABLE IF NOT EXISTS car_shop.auto_version (
+    id SERIAL PRIMARY KEY,
+    auto_model VARCHAR(50),
+    cars_color_id INT REFERENCES car_shop.cars_color(id)
+);
+
 
 CREATE TABLE IF NOT EXISTS car_shop.auto_sale (
     id SERIAL PRIMARY KEY,
     price NUMERIC(9, 2) NOT NULL,
     discount NUMERIC(4, 0),
     date DATE NOT NULL,
-    country VARCHAR(50),
     auto_version_id INT REFERENCES car_shop.auto_version(id),
     person_id INT REFERENCES car_shop.person(id),
-    UNIQUE (price, discount, date, country)
+);
+
+/*Исправлено на */
+DROP TABLE car_shop.auto_sale CASCADE;
+
+CREATE TABLE IF NOT EXISTS car_shop.auto_sale (
+    id SERIAL PRIMARY KEY,
+    price NUMERIC(9, 2) NOT NULL,
+    discount NUMERIC(4, 0),
+    date DATE NOT NULL,
+    auto_version_id INT REFERENCES car_shop.auto_version(id),
+    person_id INT REFERENCES car_shop.person(id)
 );
